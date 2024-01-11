@@ -7,6 +7,7 @@
 #include "chrono"
 
 #include "Windows.h"
+#include "memoryapi.h"
 #include <fstream>
 #include <unordered_set>
 #include <mutex>
@@ -98,6 +99,43 @@ void SetHook() {
     // ...
 }
 
+void SetHook2() {
+    // Versuch, die Adresse über wglGetProcAddress zu erhalten
+    originalSwapBuffers = (PFNSWAPBUFFERS)GetProcAddress(GetModuleHandle(L"gdi32.dll"), "SwapBuffers");
+
+    if (originalSwapBuffers == NULL) {
+        logMessage("Failed to get address of SwapBuffers using wglGetProcAddress");
+
+        // Fallback: Versuchen Sie es mit GetProcAddress, falls erforderlich
+        HMODULE hGdiMod = GetModuleHandle(L"gdi32.dll");
+        if (hGdiMod != NULL) {
+            originalSwapBuffers = (PFNSWAPBUFFERS)GetProcAddress(hGdiMod, "SwapBuffers");
+            if (originalSwapBuffers != NULL) {
+                logPointer("Successfully hooked SwapBuffers using GetProcAddress from gdi32.dll, address", originalSwapBuffers);
+            }
+            else {
+                logMessage("Failed to get address of SwapBuffers using GetProcAddress from gdi32.dll");
+            }
+        }
+        else {
+            logMessage("Failed to get handle to gdi32.dll");
+        }
+    }
+    else {
+        logPointer("Successfully hooked SwapBuffers using wglGetProcAddress, address", originalSwapBuffers);
+    }
+
+    // Hook setzen (IAT-Hooking oder andere Techniken)
+    // ...
+}
+
+BOOL WINAPI mySwapBuffers(HDC hdc) {
+    // Benutzerdefinierter Code
+    return originalSwapBuffers(hdc);
+}
+
+
+
 // DLL-Einstiegspunkt
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserved) {
     switch (ul_reason_for_call) {
@@ -108,6 +146,7 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
         DisableThreadLibraryCalls(hModule);
         // Setzen des Hooks
         SetHook();
+        SetHook2();
         break;
     case DLL_PROCESS_DETACH:
         logMessage("DLL detached");
