@@ -1,0 +1,60 @@
+#include "pch.h"
+#include <windows.h>
+#include <detours.h>
+#include <gl/GL.h>
+#include <iostream>
+#include <fstream>
+
+// Prototyp der Originalfunktion
+typedef void (APIENTRY* PFNGLDRAWARRAYS)(GLenum mode, GLint first, GLsizei count);
+PFNGLDRAWARRAYS originalGlDrawArrays = nullptr;
+
+// Erstellen eines ofstream-Objekts für das Logging
+std::ofstream logFile("hooklog.txt", std::ios::app);
+
+// Hooked Funktion
+void APIENTRY hookedGlDrawArrays(GLenum mode, GLint first, GLsizei count) {
+    // Rendering-Logik vor dem Aufruf der Originalfunktion
+    glPushMatrix();  // Den aktuellen Zustand der Matrix speichern
+    glLoadIdentity(); // Ladet die Identitätsmatrix
+
+    glBegin(GL_QUADS); // Beginn des Zeichnens eines Rechtecks
+    glColor3f(1.0f, 0.0f, 0.0f); // Farbe setzen (Rot)
+    glVertex2f(-0.5f, -0.5f);   // Unten links
+    glVertex2f(0.5f, -0.5f);    // Unten rechts
+    glVertex2f(0.5f, 0.5f);     // Oben rechts
+    glVertex2f(-0.5f, 0.5f);    // Oben links
+    glEnd();
+
+    glPopMatrix(); // Den gespeicherten Zustand der Matrix wiederherstellen
+
+    // Aufruf der Originalfunktion
+    originalGlDrawArrays(mode, first, count);
+}
+
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserved) {
+    switch (ul_reason_for_call) {
+    case DLL_PROCESS_ATTACH:
+        DisableThreadLibraryCalls(hModule);
+        originalGlDrawArrays = (PFNGLDRAWARRAYS)wglGetProcAddress("glDrawArrays");
+        if (originalGlDrawArrays == nullptr) {
+            logFile << "Original glDrawArrays not found." << std::endl;
+            return FALSE;
+        }
+        DetourTransactionBegin();
+        DetourUpdateThread(GetCurrentThread());
+        DetourAttach(&(PVOID&)originalGlDrawArrays, hookedGlDrawArrays);
+        if (DetourTransactionCommit() != NO_ERROR) {
+            logFile << "Failed to hook glDrawArrays." << std::endl;
+            return FALSE;
+        }
+        break;
+    case DLL_PROCESS_DETACH:
+        DetourTransactionBegin();
+        DetourUpdateThread(GetCurrentThread());
+        DetourDetach(&(PVOID&)originalGlDrawArrays, hookedGlDrawArrays);
+        DetourTransactionCommit();
+        break;
+    }
+    return TRUE;
+}

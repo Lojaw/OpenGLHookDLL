@@ -1,0 +1,3 @@
+DLL attached
+Failed to get address of glBegin using wglGetProcAddress
+Successfully hooked glBegin using GetProcAddress, address: 00007FFD0E586060
