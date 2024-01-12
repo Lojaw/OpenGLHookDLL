@@ -1,6 +1,6 @@
-DLL attached
-Failed to get address of glBegin using wglGetProcAddress
-Successfully hooked glBegin using GetProcAddress, address: 00007FFEEE016060
-Failed to get address of SwapBuffers using wglGetProcAddress
-Successfully hooked SwapBuffers using GetProcAddress from gdi32.dll, address: 00007FFF925C7180
-DLL detached
+DLL_PROCESS_ATTACH: DLL attached.
+ContinuousHookCheck thread started.
+originalSwapBuffers is null, attempting to hook...
+Attempting to hook function.
+Memory protection changed.
+Function hooked successfully.
